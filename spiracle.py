@@ -154,11 +154,11 @@ def run_pump(adc, timeout, water_sensitive=True):
 
 
 @click.group()
-def moisture():
+def spiracle():
     pass
 
 
-@moisture.command()
+@spiracle.command()
 @click.argument("channel", type=click.INT)
 def debug(channel):
     adc = ADC()
@@ -177,7 +177,7 @@ def debug(channel):
         time.sleep(ADC_READ_INTERVAL)
 
 
-@moisture.command()
+@spiracle.command()
 @click.argument("timeout", type=click.FLOAT)
 @click.option("--water-sensitive", is_flag=True, default=False)
 def pump(timeout, water_sensitive):
@@ -189,7 +189,7 @@ def pump(timeout, water_sensitive):
         cleanup()
 
 
-@moisture.command()
+@spiracle.command()
 @click.argument("timeout", type=click.FLOAT)
 def run(timeout):
     try:
@@ -213,4 +213,4 @@ def run(timeout):
 
 
 if __name__ == "__main__":
-    moisture()
+    spiracle()
