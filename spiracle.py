@@ -168,7 +168,7 @@ def run_and_cleanup(runner, *runner_args, **runner_kwargs):
     try:
         adc = ADC()
         adc.set_adc_refvoltage(ADC_REFERENCE_VOLTAGE)
-        runner(*runner_args, **runner_kwargs)
+        runner(adc, *runner_args, **runner_kwargs)
     finally:
         cleanup()
 
