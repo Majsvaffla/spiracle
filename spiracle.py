@@ -118,8 +118,8 @@ def is_soil_dry(adc):
     return read_adc(adc, SOIL_ADC_CHANNEL) > SOIL_DRY_THRESHOLD
 
 
-def run_pump(adc, timeout, water_sensitive=True):
-    if water_sensitive:
+def run_pump(adc, timeout, check_water_level=True, check_moisture=True):
+    if check_moisture:
         _echo(
             "Running pump until the soil is wet or "
             "for at most {} seconds.".format(timeout)
@@ -127,21 +127,17 @@ def run_pump(adc, timeout, water_sensitive=True):
     else:
         _echo("Running pump for {} seconds.".format(timeout))
 
-    adc = ADC()
-    adc.set_adc_refvoltage(ADC_REFERENCE_VOLTAGE)
-
     relay_pin = OutputPin(RELAY_PIN_NUMBER)
     relay_pin.set_high()
 
     stop_time = time.time() + timeout
     while True:
-        if water_sensitive:
-            if is_water_level_critical(adc):
-                _echo(WATER_LEVEL_CRITICAL_MESSAGE)
-                break
-            if not is_soil_dry(adc):
-                _echo(SOIL_IS_WET_MESSAGE)
-                break
+        if check_water_level and is_water_level_critical(adc):
+            _echo(WATER_LEVEL_CRITICAL_MESSAGE)
+            break
+        if check_moisture and not is_soil_dry(adc):
+            _echo(SOIL_IS_WET_MESSAGE)
+            break
         if time.time() >= stop_time:
             _echo(TIME_IS_UP_MESSAGE)
             break
@@ -149,8 +145,32 @@ def run_pump(adc, timeout, water_sensitive=True):
     _echo(STOPPING_PUMP_MESSAGE)
     relay_pin.set_low()
 
-    if water_sensitive and is_water_level_low(adc):
+    if check_water_level and is_water_level_low(adc):
         _echo(WATER_LEVEL_WARNING_MESSAGE)
+
+
+def check_sensors_and_run_pump(adc, timeout):
+    if is_water_level_critical(adc):
+        _echo(WATER_LEVEL_CRITICAL_MESSAGE)
+        exit()
+
+    if is_water_level_low(adc):
+        _echo(WATER_LEVEL_WARNING_MESSAGE)
+
+    if is_soil_dry(adc):
+        _echo("The soil is dry.")
+        run_pump(adc, timeout)
+    else:
+        _echo(SOIL_IS_WET_MESSAGE)
+
+
+def run_and_cleanup(runner, *runner_args, **runner_kwargs):
+    try:
+        adc = ADC()
+        adc.set_adc_refvoltage(ADC_REFERENCE_VOLTAGE)
+        runner(*runner_args, **runner_kwargs)
+    finally:
+        cleanup()
 
 
 @click.group()
@@ -179,37 +199,16 @@ def debug(channel):
 
 @spiracle.command()
 @click.argument("timeout", type=click.FLOAT)
-@click.option("--water-sensitive", is_flag=True, default=False)
-def pump(timeout, water_sensitive):
-    try:
-        adc = ADC()
-        adc.set_adc_refvoltage(ADC_REFERENCE_VOLTAGE)
-        run_pump(adc, timeout, water_sensitive)
-    finally:
-        cleanup()
+@click.option("--water-level-sensor", is_flag=True, default=False)
+@click.option("--moisture-sensor", is_flag=True, default=False)
+def pump(timeout, water_level_sensor, moisture_sensor):
+    run_and_cleanup(run_pump, timeout, water_level_sensor, moisture_sensor)
 
 
 @spiracle.command()
 @click.argument("timeout", type=click.FLOAT)
 def run(timeout):
-    try:
-        adc = ADC()
-        adc.set_adc_refvoltage(ADC_REFERENCE_VOLTAGE)
-
-        if is_water_level_critical(adc):
-            _echo(WATER_LEVEL_CRITICAL_MESSAGE)
-            exit()
-
-        if is_water_level_low(adc):
-            _echo(WATER_LEVEL_WARNING_MESSAGE)
-
-        if is_soil_dry(adc):
-            _echo("The soil is dry.")
-            run_pump(adc, timeout)
-        else:
-            _echo(SOIL_IS_WET_MESSAGE)
-    finally:
-        cleanup()
+    run_and_cleanup(check_sensors_and_run_pump, timeout)
 
 
 if __name__ == "__main__":
