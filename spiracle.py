@@ -115,7 +115,7 @@ def is_water_level_critical(adc):
 
 
 def is_soil_dry(adc):
-    return read_adc(adc, SOIL_ADC_CHANNEL) > SOIL_DRY_THRESHOLD
+    return read_adc(adc, SOIL_ADC_CHANNEL) < SOIL_DRY_THRESHOLD
 
 
 def run_pump(adc, timeout, check_water_level=True, check_moisture=True):
