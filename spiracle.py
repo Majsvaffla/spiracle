@@ -152,7 +152,7 @@ def run_pump(adc, timeout, check_water_level=True, check_moisture=True):
 def check_sensors_and_run_pump(adc, timeout):
     if is_water_level_critical(adc):
         _echo(WATER_LEVEL_CRITICAL_MESSAGE)
-        exit()
+        exit(1)
 
     if is_water_level_low(adc):
         _echo(WATER_LEVEL_WARNING_MESSAGE)
